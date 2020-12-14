@@ -1,39 +1,31 @@
-package cache
+package config
 
 import (
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/BurntSushi/toml"
 )
 
-type Cache struct {
-	debug bool
+type Config struct {
+	Debug   bool
+	Console bool
 
 	LocalEndpoint    string
 	StoreDir         string
 	StoreMaxSizeMB   uint32
+	LogDir           string
 	UplinksURL       []string
 	DefaultCacheTime time.Duration
 	CachePolicyMap   map[string]time.Duration
-
-	// Downlink
-	dlServer *http.Server
-
-	// Uplink
-	ulClient *http.Client
-
-	// Storage
-	stTsCache map[string]time.Time
-	stLocks   map[string]struct{}
 }
 
-func getDefaultConfig() *Cache {
-	return &Cache{
+func getDefaultConfig() *Config {
+	return &Config{
 		LocalEndpoint:    ":8081",
 		StoreDir:         "data",
 		StoreMaxSizeMB:   16384,
+		LogDir:           "log",
 		UplinksURL:       []string{"https://alpha.de.repo.voidlinux.org"},
 		DefaultCacheTime: 1 * time.Minute,
 		CachePolicyMap: map[string]time.Duration{
@@ -41,14 +33,18 @@ func getDefaultConfig() *Cache {
 			".xbps": 30 * 24 * time.Hour, // ~1 month
 			".sig":  30 * 24 * time.Hour, // ~1 month
 		},
-		stTsCache: map[string]time.Time{},
-		stLocks:   map[string]struct{}{},
 	}
 }
 
-func LoadConfig(f string, dbg bool) (*Cache, error) {
+func LoadConfig(f string, dbg, con bool) (*Config, error) {
 	c := getDefaultConfig()
-	c.debug = dbg
+	if dbg {
+		c.Debug = true
+	}
+	if con {
+		c.Console = true
+	}
+
 	if _, err := toml.DecodeFile(f, c); err != nil {
 		if os.IsNotExist(err) {
 			return c, nil
