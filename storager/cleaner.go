@@ -18,13 +18,14 @@ func CleanRepo(repo string) error {
 			log.Debugf("Scanning %s", rr)
 
 			for f := range r.db {
+				// log.Debugln(f)
 				files[f+".xbps"] = struct{}{}
 				files[f+".xbps.sig"] = struct{}{}
 			}
 		}
 	}
 
-	if len(files) > 0 {
+	if len(files) > 1 {
 		err := filepath.Walk(
 			GetRepoPath(repo),
 			func(path string, info os.FileInfo, err error) error {

@@ -84,6 +84,7 @@ func (r *Repository) LoadDB() error {
 		switch vv := v.(type) {
 		case map[string]interface{}:
 			fname := vv["pkgver"].(string)
+			farch := vv["architecture"].(string)
 			fsha := vv["filename-sha256"].(string)
 
 			fshad, err := hex.DecodeString(fsha)
@@ -96,7 +97,7 @@ func (r *Repository) LoadDB() error {
 				Len: fsiz,
 			}
 			copy(p.Sha[:], fshad)
-			ans[fname] = p
+			ans[fname+"."+farch] = p
 		}
 
 	}
