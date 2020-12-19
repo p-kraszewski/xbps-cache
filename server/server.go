@@ -77,22 +77,7 @@ func dlHandler(w http.ResponseWriter, r *http.Request) {
 			WithField("cache", cached).
 			Infoln(len(data))
 		if !cached {
-			err := storager.ReloadCache(repo, elem)
-			if err != nil {
-				log.WithField("peer", peer).
-					WithField("repo", repo).
-					WithField("file", elem).
-					Errorln(err)
-			} else {
-				err = storager.CleanRepo(repo)
-				if err != nil {
-					log.WithField("peer", peer).
-						WithField("repo", repo).
-						WithField("file", elem).
-						Errorln(err)
-				}
-
-			}
+			storager.ReloadRepo(repo, elem)
 		}
 		return
 

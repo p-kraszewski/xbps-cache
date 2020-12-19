@@ -4,9 +4,54 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 )
 
-func CleanRepo(repo string) error {
+type (
+	updRepoBG struct {
+		repo string
+		arch string
+	}
+)
+
+var (
+	updRepoChn  = make(chan updRepoBG)
+	updRepoLock sync.RWMutex
+)
+
+func ReloadRepo(repo string, arch string) {
+	updRepoChn <- updRepoBG{
+		repo: repo,
+		arch: arch,
+	}
+}
+
+func StartUpdServer() {
+	go func() {
+		for req := range updRepoChn {
+			func() {
+				updRepoLock.Lock()
+				defer updRepoLock.Unlock()
+				err := reloadCache(req.repo, req.arch)
+				if err != nil {
+					log.WithField("repo", req.repo).
+						WithField("arch", req.arch).
+						Errorln(err)
+				} else {
+					err = cleanRepo(req.repo)
+					if err != nil {
+						log.WithField("repo", req.repo).
+							WithField("arch", req.arch).
+							Errorln(err)
+					}
+
+				}
+			}()
+		}
+	}()
+}
+
+func cleanRepo(repo string) error {
 	repo = flattenRepoName(repo)
 	files := map[string]struct{}{}
 

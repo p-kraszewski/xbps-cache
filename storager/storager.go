@@ -52,7 +52,7 @@ func Config(c *config.Config, lc logging.Config) {
 		}
 	}
 	for r := range repoList {
-		err = CleanRepo(r)
+		err = cleanRepo(r)
 		if err != nil {
 			log.Errorln(err)
 		}

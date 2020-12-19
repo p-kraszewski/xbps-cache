@@ -106,7 +106,7 @@ func (r *Repository) LoadDB() error {
 	return nil
 }
 
-func ReloadCache(repo, arch string) error {
+func reloadCache(repo, arch string) error {
 	repo = flattenRepoName(repo) + "/" + arch
 	repoPath := path.Join(baseDir, repo)
 	if _, found := cache[repo]; !found {
