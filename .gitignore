@@ -16,3 +16,5 @@
 
 /.idea/
 /log/*.log
+/data/
+!/data/.keep

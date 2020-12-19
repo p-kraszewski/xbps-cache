@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -11,28 +10,21 @@ type Config struct {
 	Debug   bool
 	Console bool
 
-	LocalEndpoint    string
-	StoreDir         string
-	StoreMaxSizeMB   uint32
-	LogDir           string
-	UplinksURL       []string
-	DefaultCacheTime time.Duration
-	CachePolicyMap   map[string]time.Duration
+	LocalEndpoint string
+	StoreDir      string
+	LogDir        string
+	UplinkURL     string
 }
 
 func getDefaultConfig() *Config {
+
+	// https://alpha.de.repo.voidlinux.org/current/debug/x86_64-repodata
+
 	return &Config{
-		LocalEndpoint:    ":8081",
-		StoreDir:         "data",
-		StoreMaxSizeMB:   16384,
-		LogDir:           "log",
-		UplinksURL:       []string{"https://alpha.de.repo.voidlinux.org"},
-		DefaultCacheTime: 1 * time.Minute,
-		CachePolicyMap: map[string]time.Duration{
-			"":      5 * time.Minute,     // Don't cache
-			".xbps": 30 * 24 * time.Hour, // ~1 month
-			".sig":  30 * 24 * time.Hour, // ~1 month
-		},
+		LocalEndpoint: ":8081",
+		StoreDir:      "data",
+		LogDir:        "log",
+		UplinkURL:     "https://alpha.de.repo.voidlinux.org",
 	}
 }
 

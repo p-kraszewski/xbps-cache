@@ -1,4 +1,4 @@
-package repodata
+package storager
 
 import (
 	"archive/tar"
@@ -9,34 +9,39 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"howett.net/plist"
-
-	"github.com/p-kraszewski/xbps-cache/logging"
 )
 
 const (
 	PKG_LIST = "index.plist"
 )
 
-var log = logging.Get()
+type (
+	Pkg struct {
+		Sha [32]byte
+		Len uint64
+	}
 
-type Pkg struct {
-	Sha [32]byte
-	Len uint64
-}
+	RepoID string
 
-type DB map[string]Pkg
+	Repository struct {
+		id   RepoID
+		db   map[string]Pkg
+		addr string
+		dir  string
+	}
+)
 
-func LoadDB(file string) (DB, error) {
+func (r *Repository) loadDB(file string) error {
 
 	ib, err := os.Open(file)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer ib.Close()
 	id, err := zstd.NewReader(ib)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer id.Close()
 
@@ -52,7 +57,7 @@ func LoadDB(file string) (DB, error) {
 		}
 		if err != nil {
 			log.Error(err)
-			return nil, err
+			return err
 		}
 
 		if hdr.Name != PKG_LIST {
@@ -67,7 +72,7 @@ func LoadDB(file string) (DB, error) {
 
 		_, err = plist.Unmarshal(buf.Bytes(), &db)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		break
 
@@ -81,7 +86,7 @@ func LoadDB(file string) (DB, error) {
 
 			fshad, err := hex.DecodeString(fsha)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			fsiz := vv["filename-size"].(uint64)
@@ -93,6 +98,7 @@ func LoadDB(file string) (DB, error) {
 		}
 
 	}
+	r.db = ans
 
-	return ans, nil
+	return nil
 }

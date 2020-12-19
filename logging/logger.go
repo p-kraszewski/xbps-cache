@@ -10,22 +10,22 @@ import (
 )
 
 type writer struct {
+	suffix    string
 	dir       string
 	lastStamp int64
 	writer    io.WriteCloser
 }
 
 type Config struct {
+	Suffix  string
 	Dir     string
 	Debug   bool
 	Console bool
 	Json    bool
 }
 
-var ll = logrus.New()
-
 func (w *writer) Write(p []byte) (n int, err error) {
-	now := time.Now()
+	now := time.Now().UTC()
 	stamp := now.Unix() / 3600
 
 	if stamp != w.lastStamp {
@@ -33,8 +33,8 @@ func (w *writer) Write(p []byte) (n int, err error) {
 		if w.writer != nil {
 			w.writer.Close()
 		}
-		logname := now.Format("20060102-0304.log")
-		filename := path.Join(w.dir, logname)
+		logname := now.Format("20060102-15")
+		filename := path.Join(w.dir, logname+"00"+w.suffix+".log")
 		w.writer, err = os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.
 			O_WRONLY, 0644)
 		if err != nil {
@@ -44,10 +44,8 @@ func (w *writer) Write(p []byte) (n int, err error) {
 	return w.writer.Write(p)
 }
 
-func Get() *logrus.Logger { return ll }
-
-func Setup(c *Config) *logrus.Logger {
-
+func New(c *Config) *logrus.Logger {
+	ll := logrus.New()
 	if c.Console {
 		ll.Out = os.Stderr
 	} else {
@@ -57,7 +55,8 @@ func Setup(c *Config) *logrus.Logger {
 			ll.SetFormatter(&logrus.TextFormatter{})
 		}
 		w := &writer{
-			dir: c.Dir,
+			suffix: c.Suffix,
+			dir:    c.Dir,
 		}
 		ll.Out = w
 	}
