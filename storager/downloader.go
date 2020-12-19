@@ -29,6 +29,10 @@ var (
 	inFlight = map[string]bool{}
 )
 
+func GetRepoPath(repo string) string {
+	return path.Join(baseDir, flattenRepoName(repo))
+}
+
 func GetRepoData(repo, file string) ([]byte, bool, error) {
 	var (
 		stamp    time.Time

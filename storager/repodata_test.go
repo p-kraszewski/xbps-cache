@@ -16,7 +16,7 @@ func TestReadRepofile(t *testing.T) {
 
 	// a := assert.New(t)
 	//
-	// rf, err := loadDB("../.test_data/x86_64-repodata")
+	// rf, err := LoadDB("../.test_data/x86_64-repodata")
 	// a.Nil(err)
 	// a.NotNil(rf)
 	//

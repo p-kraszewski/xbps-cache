@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
+	"path"
 
 	"github.com/klauspost/compress/zstd"
 	"howett.net/plist"
@@ -24,14 +25,16 @@ type (
 	RepoID string
 
 	Repository struct {
-		id   RepoID
+		id   string
 		db   map[string]Pkg
-		addr string
 		dir  string
+		file string
 	}
 )
 
-func (r *Repository) loadDB(file string) error {
+func (r *Repository) LoadDB() error {
+
+	file := path.Join(r.dir, r.file)
 
 	ib, err := os.Open(file)
 	if err != nil {
@@ -65,7 +68,6 @@ func (r *Repository) loadDB(file string) error {
 			continue
 		}
 
-		log.Infof("Decoding %s", hdr.Name)
 		var buf bytes.Buffer
 
 		buf.ReadFrom(tr)
@@ -101,4 +103,19 @@ func (r *Repository) loadDB(file string) error {
 	r.db = ans
 
 	return nil
+}
+
+func ReloadCache(repo, arch string) error {
+	repo = flattenRepoName(repo) + "/" + arch
+	repoPath := path.Join(baseDir, repo)
+	if _, found := cache[repo]; !found {
+		cache[repo] = &Repository{
+			id:   repo,
+			db:   nil,
+			dir:  path.Dir(repoPath),
+			file: path.Base(repoPath),
+		}
+	}
+
+	return cache[repo].LoadDB()
 }
