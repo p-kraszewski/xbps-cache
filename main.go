@@ -2,39 +2,41 @@ package main
 
 import (
 	"flag"
-	"log"
 
-	"github.com/p-kraszewski/xbps-cache/cache"
+	"github.com/p-kraszewski/xbps-cache/config"
+	"github.com/p-kraszewski/xbps-cache/logging"
+	"github.com/p-kraszewski/xbps-cache/server"
+	"github.com/p-kraszewski/xbps-cache/storager"
 )
 
 var (
 	dbgMode = flag.Bool("v", false, "Verbose logging")
-	cfgFile = flag.String("cfg", "xbps-cache.conf", "Cache file")
+	cfgFile = flag.String("cfg", "/etc/xbps-cache.conf", "Cache file")
+	conLog  = flag.Bool("stderr", false, "Log to stderr")
+	jsonLog = flag.Bool("json", false, "Log to files in JSON")
 )
 
 func main() {
 	flag.Parse()
 
-	server, err := cache.LoadConfig(*cfgFile, *dbgMode)
+	cfg, err := config.LoadConfig(*cfgFile, *dbgMode, *conLog)
 	if err != nil {
 		panic(err)
 	}
 
-	server.UlNew()
-
-	err = server.StNew()
-	if err != nil {
-		panic(err)
+	logCfg := logging.Config{
+		Dir:     cfg.LogDir,
+		Debug:   *dbgMode,
+		Console: *conLog,
+		Json:    *jsonLog,
 	}
 
-	err = server.DlNew()
-	if err != nil {
-		panic(err)
-	}
+	log := logging.New(&logCfg)
+	log.Debugf("%#+v", cfg)
 
-	if *dbgMode {
-		log.Printf("%+#v", server)
-	}
+	storager.Config(cfg, logCfg)
+
+	server.Start(cfg, logCfg)
 
 	select {}
 }
