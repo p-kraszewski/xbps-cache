@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 )
 
 type (
@@ -15,8 +14,7 @@ type (
 )
 
 var (
-	updRepoChn  = make(chan updRepoBG)
-	updRepoLock sync.RWMutex
+	updRepoChn = make(chan updRepoBG)
 )
 
 func ReloadRepo(repo string, arch string) {
@@ -29,29 +27,36 @@ func ReloadRepo(repo string, arch string) {
 func StartUpdServer() {
 	go func() {
 		for req := range updRepoChn {
-			func() {
-				updRepoLock.Lock()
-				defer updRepoLock.Unlock()
-				err := reloadCache(req.repo, req.arch)
+			err := reloadCache(req.repo, req.arch)
+			if err != nil {
+				log.WithField("repo", req.repo).
+					WithField("arch", req.arch).
+					Errorln(err)
+			} else {
+				log.Infof("Reloaded %s:%s", req.repo, req.arch)
+				del, err := cleanRepo(req.repo)
 				if err != nil {
 					log.WithField("repo", req.repo).
 						WithField("arch", req.arch).
 						Errorln(err)
 				} else {
-					err = cleanRepo(req.repo)
-					if err != nil {
-						log.WithField("repo", req.repo).
-							WithField("arch", req.arch).
-							Errorln(err)
+					if del > 0 {
+						log.Infof("Cleaned %s:%s - %d file(s)", req.repo,
+							req.arch, del)
+					} else {
+						log.Infof("No outdated files in %s:%s", req.repo,
+							req.arch)
 					}
-
 				}
-			}()
+
+			}
+
 		}
 	}()
 }
 
-func cleanRepo(repo string) error {
+func cleanRepo(repo string) (int, error) {
+	deleted := 0
 	repo = flattenRepoName(repo)
 	files := map[string]struct{}{}
 
@@ -78,9 +83,10 @@ func cleanRepo(repo string) error {
 					spath := filepath.Base(path)
 					if _, found := files[spath]; !found {
 						log.Infof("Removing %s", path)
+						deleted += 1
 						return os.Remove(path)
 					} else {
-						log.Debugf("Preserving %s", path)
+						log.Tracef("Preserving %s", path)
 					}
 				}
 
@@ -92,5 +98,5 @@ func cleanRepo(repo string) error {
 	} else {
 		log.Warnf("No files in descriptor found, won't clean")
 	}
-	return nil
+	return deleted, nil
 }

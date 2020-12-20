@@ -26,7 +26,7 @@ func Config(c *config.Config, lc logging.Config) {
 	baseDir = c.StoreDir
 	baseUrl = c.UplinkURL
 
-	repoList := map[string]struct{}{}
+	go StartUpdServer()
 
 	repos, err := filepath.Glob(baseDir + "/*/*-repodata")
 	if err != nil {
@@ -37,26 +37,9 @@ func Config(c *config.Config, lc logging.Config) {
 		rr, _ := filepath.Rel(baseDir, r)
 		rd := filepath.Dir(rr)
 		arch := filepath.Base(rr)
-		repoList[rd] = struct{}{}
-		cache[rr] = &Repository{
-			id:   rr,
-			db:   nil,
-			dir:  path.Dir(r),
-			file: path.Base(r),
-		}
+		ReloadRepo(rd, arch)
+	}
 
-		if err := cache[rr].LoadDB(); err != nil {
-			log.Errorln(err)
-		} else {
-			log.Infof("Loaded repo descriptor %s for %s", rd, arch)
-		}
-	}
-	for r := range repoList {
-		err = cleanRepo(r)
-		if err != nil {
-			log.Errorln(err)
-		}
-	}
 }
 
 func flattenRepoName(repo string) string {

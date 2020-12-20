@@ -32,7 +32,7 @@ func Start(c *config.Config, lc logging.Config) {
 	srv = &http.Server{
 		Addr:           c.LocalEndpoint,
 		Handler:        m,
-		ReadTimeout:    1200 * time.Second,
+		ReadTimeout:    15 * time.Second,
 		WriteTimeout:   1200 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
@@ -77,6 +77,7 @@ func dlHandler(w http.ResponseWriter, r *http.Request) {
 			WithField("cache", cached).
 			Infoln(len(data))
 		if !cached {
+			log.Infof("Repo %s:%s updated, refreshing and cleaning", repo, elem)
 			storager.ReloadRepo(repo, elem)
 		}
 		return

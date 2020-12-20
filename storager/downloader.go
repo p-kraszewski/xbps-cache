@@ -22,7 +22,7 @@ var (
 	RepoClient = &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    10,
-			IdleConnTimeout: 1200 * time.Second,
+			IdleConnTimeout: 30 * time.Second,
 		},
 	}
 
@@ -82,9 +82,6 @@ func GetRepoData(repo, file string) ([]byte, bool, error) {
 		switch resp.StatusCode {
 		case 404:
 			return nil, false, http.ErrMissingFile
-		case 304:
-			data, err := ioutil.ReadFile(fullPath)
-			return data, true, err
 		case 200:
 			var buf bytes.Buffer
 			_, err := io.Copy(&buf, resp.Body)
@@ -100,6 +97,7 @@ func GetRepoData(repo, file string) ([]byte, bool, error) {
 
 		return nil, false, http.ErrServerClosed
 	} else {
+		log.Debugf("Using cached version of %s ", fullPath)
 		data, err := ioutil.ReadFile(fullPath)
 		return data, true, err
 	}
