@@ -2,6 +2,8 @@ package storager
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"hash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +16,8 @@ type (
 	RepoFile struct {
 		inStream  io.ReadCloser
 		outStream io.WriteCloser
+		sum       hash.Hash
+		sumExp    []byte
 		cachePath string
 	}
 )
@@ -103,7 +107,7 @@ func GetRepoData(repo, file string) ([]byte, bool, error) {
 	}
 }
 
-func GetFile(repo string, file string) (*RepoFile, bool, error) {
+func GetFile(repo string, file string, expSum []byte) (*RepoFile, bool, error) {
 	var (
 		stamp    time.Time
 		srvStamp time.Time
@@ -167,11 +171,21 @@ func GetFile(repo string, file string) (*RepoFile, bool, error) {
 				return nil, false, err
 			}
 			inFlight[fullPath] = true
-			return &RepoFile{
-				inStream:  resp.Body,
-				outStream: cacheFile,
-				cachePath: fullPath,
-			}, false, nil
+			if expSum == nil {
+				return &RepoFile{
+					inStream:  resp.Body,
+					outStream: cacheFile,
+					cachePath: fullPath,
+				}, false, nil
+			} else {
+				return &RepoFile{
+					inStream:  resp.Body,
+					outStream: cacheFile,
+					sum:       sha256.New(),
+					sumExp:    expSum,
+					cachePath: fullPath,
+				}, false, nil
+			}
 		}
 
 		return nil, false, http.ErrServerClosed
@@ -187,6 +201,9 @@ func (rf *RepoFile) Read(p []byte) (n int, err error) {
 		return ln, err
 	}
 	if rf.outStream != nil {
+		if rf.sum != nil {
+			rf.sum.Write(p[:ln])
+		}
 		return rf.outStream.Write(p[:ln])
 	}
 	return ln, err
@@ -200,5 +217,16 @@ func (rf *RepoFile) Close() error {
 		rf.outStream.Close()
 	}
 	delete(inFlight, rf.cachePath)
+
+	if rf.sum != nil {
+		calc := rf.sum.Sum(nil)
+		if !bytes.Equal(calc, rf.sumExp) {
+			log.Warnf("Downloaded package bad checksum %s, "+
+				"removing from cache", rf.cachePath)
+			os.Remove(rf.cachePath)
+			os.Remove(rf.cachePath + ".sig")
+		}
+	}
+
 	return nil
 }

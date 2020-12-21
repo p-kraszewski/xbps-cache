@@ -2,8 +2,8 @@ package storager
 
 import (
 	"os"
-	"path"
 	"path/filepath"
+	"strings"
 )
 
 type (
@@ -27,7 +27,7 @@ func ReloadRepo(repo string, arch string) {
 func StartUpdServer() {
 	go func() {
 		for req := range updRepoChn {
-			err := reloadCache(req.repo, req.arch)
+			err := reloadCache(req.repo)
 			if err != nil {
 				log.WithField("repo", req.repo).
 					WithField("arch", req.arch).
@@ -61,14 +61,9 @@ func cleanRepo(repo string) (int, error) {
 	files := map[string]struct{}{}
 
 	for n, r := range cache {
-		rr := path.Dir(n)
-		if rr == repo {
-			// Protecting repo descriptor
-			files[path.Base(n)] = struct{}{}
-			log.Debugf("Scanning %s", rr)
+		if n == repo {
 
 			for f := range r.db {
-				// log.Debugln(f)
 				files[f+".xbps"] = struct{}{}
 				files[f+".xbps.sig"] = struct{}{}
 			}
@@ -81,12 +76,14 @@ func cleanRepo(repo string) (int, error) {
 			func(path string, info os.FileInfo, err error) error {
 				if info.Mode().IsRegular() {
 					spath := filepath.Base(path)
-					if _, found := files[spath]; !found {
-						log.Infof("Removing %s", path)
-						deleted += 1
-						return os.Remove(path)
-					} else {
-						log.Tracef("Preserving %s", path)
+					if !strings.HasSuffix(spath, "-repodata") {
+						if _, found := files[spath]; !found {
+							log.Infof("Removing %s", path)
+							deleted += 1
+							return os.Remove(path)
+						} else {
+							log.Tracef("Preserving %s", path)
+						}
 					}
 				}
 
