@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +70,10 @@ func dlHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Error: %v", err)
 			return
 		}
+		w.Header().Add(
+			`content-length`,
+			strconv.FormatUint(uint64(len(data)), 10),
+		)
 		w.WriteHeader(200)
 		w.Write(data)
 		log.WithField("peer", peer).
@@ -83,7 +88,7 @@ func dlHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case ".xbps", ".sig":
-		csum := storager.GetFileSha256(repo, elem)
+		csum, flen := storager.GetFileSha256AndLen(repo, elem)
 		data, cached, err := storager.GetFile(repo, elem, csum)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -99,6 +104,7 @@ func dlHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer data.Close()
+		w.Header().Add(`content-length`, strconv.FormatUint(flen, 10))
 		w.WriteHeader(200)
 		tl, err := io.Copy(w, data)
 		if err != nil {

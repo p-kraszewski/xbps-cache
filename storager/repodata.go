@@ -132,9 +132,13 @@ func reloadCache(repo string) error {
 	return cache[repo].LoadDB()
 }
 
-func GetFileSha256(repo, file string) []byte {
+func GetFileSha256AndLen(repo, file string) ([]byte, uint64) {
+	if path.Ext(file) == ".sig" {
+		return nil, 512
+	}
+
 	if path.Ext(file) != ".xbps" {
-		return nil
+		return nil, 0
 	}
 
 	file = file[:len(file)-5]
@@ -143,13 +147,14 @@ func GetFileSha256(repo, file string) []byte {
 
 	if rec, found := cache[repo]; found {
 		if fi, found := rec.db[file]; found {
-			return fi.Sha[:]
+			return fi.Sha[:], fi.Len
+
 		} else {
 			log.Warnf("No file of %s:%s", repo, file)
-			return nil
+			return nil, 0
 		}
 	} else {
 		log.Warnf("No repo of %s", repo)
-		return nil
+		return nil, 0
 	}
 }
