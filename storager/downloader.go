@@ -18,6 +18,7 @@ type (
 		outStream io.WriteCloser
 		sum       hash.Hash
 		sumExp    []byte
+		sizeExp   uint64
 		cachePath string
 	}
 )
@@ -39,9 +40,10 @@ func GetRepoPath(repo string) string {
 
 func GetRepoData(repo, file string) ([]byte, bool, error) {
 	var (
-		stamp    time.Time
-		srvStamp time.Time
-		hasFile  bool
+		stamp     time.Time
+		srvStamp  time.Time
+		hasFile   bool
+		_, expLen = GetFileSha256AndLen(repo, file)
 	)
 
 	dir, err := mapRepoToDir(repo, file)
@@ -54,7 +56,11 @@ func GetRepoData(repo, file string) ([]byte, bool, error) {
 	fi, err := os.Stat(fullPath)
 	if err == nil {
 		stamp = fi.ModTime().UTC()
-		hasFile = true
+		if fi.Size() == int64(expLen) {
+			hasFile = true
+		} else {
+			os.Remove(fullPath)
+		}
 	}
 
 	uri := baseUrl + repo + "/" + file
@@ -107,7 +113,8 @@ func GetRepoData(repo, file string) ([]byte, bool, error) {
 	}
 }
 
-func GetFile(repo string, file string, expSum []byte) (*RepoFile, bool, error) {
+func GetFile(repo string, file string, expSum []byte, expLen int64) (*RepoFile,
+	bool, error) {
 	var (
 		stamp    time.Time
 		srvStamp time.Time
@@ -131,7 +138,11 @@ func GetFile(repo string, file string, expSum []byte) (*RepoFile, bool, error) {
 	fi, err := os.Stat(fullPath)
 	if err == nil {
 		stamp = fi.ModTime().UTC()
-		hasFile = true
+		if fi.Size() == expLen {
+			hasFile = true
+		} else {
+			os.Remove(fullPath)
+		}
 	}
 
 	uri := baseUrl + repo + "/" + file

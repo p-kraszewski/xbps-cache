@@ -58,14 +58,14 @@ func StartUpdServer() {
 func cleanRepo(repo string) (int, error) {
 	deleted := 0
 	repo = flattenRepoName(repo)
-	files := map[string]struct{}{}
+	files := map[string]int64{}
 
 	for n, r := range cache {
 		if n == repo {
 
-			for f := range r.db {
-				files[f+".xbps"] = struct{}{}
-				files[f+".xbps.sig"] = struct{}{}
+			for f, v := range r.db {
+				files[f+".xbps"] = int64(v.Len)
+				files[f+".xbps.sig"] = 512
 			}
 		}
 	}
@@ -77,12 +77,18 @@ func cleanRepo(repo string) (int, error) {
 				if info.Mode().IsRegular() {
 					spath := filepath.Base(path)
 					if !strings.HasSuffix(spath, "-repodata") {
-						if _, found := files[spath]; !found {
+						if expLen, found := files[spath]; found {
+							if info.Size() != expLen {
+								log.Warnf("Removing mismatched size %s", path)
+								return os.Remove(path)
+							} else {
+								log.Tracef("Preserving %s", path)
+							}
+						} else {
 							log.Infof("Removing %s", path)
 							deleted += 1
 							return os.Remove(path)
-						} else {
-							log.Tracef("Preserving %s", path)
+
 						}
 					}
 				}

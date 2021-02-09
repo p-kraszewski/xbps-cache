@@ -89,7 +89,7 @@ func dlHandler(w http.ResponseWriter, r *http.Request) {
 
 	case ".xbps", ".sig":
 		csum, flen := storager.GetFileSha256AndLen(repo, elem)
-		data, cached, err := storager.GetFile(repo, elem, csum)
+		data, cached, err := storager.GetFile(repo, elem, csum, int64(flen))
 		if err != nil {
 			if os.IsNotExist(err) {
 				w.WriteHeader(404)
