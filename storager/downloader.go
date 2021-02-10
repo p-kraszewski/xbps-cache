@@ -40,10 +40,9 @@ func GetRepoPath(repo string) string {
 
 func GetRepoData(repo, file string) ([]byte, bool, error) {
 	var (
-		stamp     time.Time
-		srvStamp  time.Time
-		hasFile   bool
-		_, expLen = GetFileSha256AndLen(repo, file)
+		stamp    time.Time
+		srvStamp time.Time
+		hasFile  bool
 	)
 
 	dir, err := mapRepoToDir(repo, file)
@@ -56,11 +55,7 @@ func GetRepoData(repo, file string) ([]byte, bool, error) {
 	fi, err := os.Stat(fullPath)
 	if err == nil {
 		stamp = fi.ModTime().UTC()
-		if fi.Size() == int64(expLen) {
-			hasFile = true
-		} else {
-			os.Remove(fullPath)
-		}
+		hasFile = true
 	}
 
 	uri := baseUrl + repo + "/" + file
